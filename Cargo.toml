@@ -1,12 +1,12 @@
 [package]
 name = "rson_rs"
 version = "0.2.1"
-license = "MIT/Apache-2.0"
+resolver = "2"
+edition = "2021"
+license = "MIT"
 keywords = ["parser", "serde", "serialization"]
 authors = [
-	"Dzmitry Malyshau <kvarkus@gmail.com>",
-	"Alexander Mescheryakov <freecoder.xx@gmail.com>",
-	"Thomas Schaller <torkleyy@gmail.com>",
+	"Aleksandr Meshcheriakov <freecoder.xx@gmail.com>",
 ]
 description = "Rust Object Notation"
 categories = ["encoding"]
@@ -15,8 +15,6 @@ repository = "https://github.com/rson-rs/rson"
 documentation = "https://docs.rs/rson_rs/"
 exclude = ["bors.toml", ".travis.yml"]
 
-[lib]
-name = "rson_rs"
 
 [dependencies]
 serde = "1"

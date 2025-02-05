@@ -1,12 +1,13 @@
 //! Provides pretty serialization with `to_string`.
 
-use super::{Pretty, Result, Serializer};
-
 use serde::ser::Serialize;
+
+use super::{Pretty, Result, Serializer};
 
 /// Serializes `value` in the recommended RSON layout.
 pub fn to_string<T>(value: &T) -> Result<String>
-    where T: Serialize
+where
+    T: Serialize,
 {
     let mut s = Serializer {
         output: String::new(),

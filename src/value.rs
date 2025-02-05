@@ -9,12 +9,10 @@ use std::hash::{Hash, Hasher};
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub struct Number(f64);
 
-impl Number
-{
+impl Number {
     /// Panics if `v` is not a real number
     /// (infinity, NaN, ..).
-    pub fn new(v: f64) -> Self
-    {
+    pub fn new(v: f64) -> Self {
         if !v.is_finite() {
             panic!("Tried to create Number with a NaN / infinity");
         }
@@ -23,34 +21,27 @@ impl Number
     }
 
     /// Returns the wrapped float.
-    pub fn get(&self) -> f64
-    {
+    pub fn get(&self) -> f64 {
         self.0
     }
 }
 
-impl Eq for Number
-{
-}
+impl Eq for Number {}
 
-impl Hash for Number
-{
+impl Hash for Number {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.0 as u64);
     }
 }
 
-impl Ord for Number
-{
-    fn cmp(&self, other: &Self) -> Ordering
-    {
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).expect("Bug: Contract violation")
     }
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Value
-{
+pub enum Value {
     Bool(bool),
     Char(char),
     Map(BTreeMap<Value, Value>),

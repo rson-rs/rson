@@ -5,8 +5,7 @@ extern crate serde_json;
 use rson::value::Value;
 use serde::ser::Serialize;
 
-fn main()
-{
+fn main() {
     let data = r#"
         Scene { // class name is optional
             materials: { // this is a map

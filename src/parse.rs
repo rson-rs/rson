@@ -1,8 +1,8 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::ops::Neg;
-use std::str::{FromStr, from_utf8, from_utf8_unchecked};
+use std::str::{from_utf8, from_utf8_unchecked, FromStr};
 
-use de::{Error, ParseError, Result};
+use crate::de::{Error, ParseError, Result};
 
 const DIGITS: &[u8] = b"0123456789";
 const FLOAT_CHARS: &[u8] = b"0123456789.+-eE";
@@ -11,17 +11,14 @@ const IDENT_CHAR: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 const WHITE_SPACE: &[u8] = b"\n\t\r ";
 
 #[derive(Clone, Copy, Debug)]
-pub struct Bytes<'a>
-{
+pub struct Bytes<'a> {
     bytes: &'a [u8],
     column: usize,
     line: usize,
 }
 
-impl<'a> Bytes<'a>
-{
-    pub fn new(bytes: &'a [u8]) -> Self
-    {
+impl<'a> Bytes<'a> {
+    pub fn new(bytes: &'a [u8]) -> Self {
         let mut b = Bytes {
             bytes,
             column: 1,
@@ -33,8 +30,7 @@ impl<'a> Bytes<'a>
         b
     }
 
-    pub fn advance(&mut self, bytes: usize) -> Result<()>
-    {
+    pub fn advance(&mut self, bytes: usize) -> Result<()> {
         for _ in 0..bytes {
             self.advance_single()?;
         }
@@ -42,8 +38,7 @@ impl<'a> Bytes<'a>
         Ok(())
     }
 
-    pub fn advance_single(&mut self) -> Result<()>
-    {
+    pub fn advance_single(&mut self) -> Result<()> {
         if self.peek_or_eof()? == b'\n' {
             self.line += 1;
             self.column = 1;
@@ -56,8 +51,7 @@ impl<'a> Bytes<'a>
         Ok(())
     }
 
-    pub fn bool(&mut self) -> Result<bool>
-    {
+    pub fn bool(&mut self) -> Result<bool> {
         if self.consume("true") {
             Ok(true)
         } else if self.consume("false") {
@@ -67,13 +61,11 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn bytes(&self) -> &[u8]
-    {
+    pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 
-    pub fn char(&mut self) -> Result<char>
-    {
+    pub fn char(&mut self) -> Result<char> {
         if !self.consume("'") {
             return self.err(ParseError::ExpectedChar);
         }
@@ -99,8 +91,7 @@ impl<'a> Bytes<'a>
         Ok(c as char)
     }
 
-    pub fn comma(&mut self) -> bool
-    {
+    pub fn comma(&mut self) -> bool {
         self.skip_ws();
 
         if self.consume(",") {
@@ -114,20 +105,17 @@ impl<'a> Bytes<'a>
 
     /// Only returns true if the char after `ident` cannot belong
     /// to an identifier.
-    pub fn check_ident(&mut self, ident: &str) -> bool
-    {
+    pub fn check_ident(&mut self, ident: &str) -> bool {
         self.test_for(ident) && !self.check_ident_char(ident.len())
     }
 
-    fn check_ident_char(&self, index: usize) -> bool
-    {
+    fn check_ident_char(&self, index: usize) -> bool {
         self.bytes.get(index).map(|b| IDENT_CHAR.contains(b)).unwrap_or(false)
     }
 
     /// Only returns true if the char after `ident` cannot belong
     /// to an identifier.
-    pub fn consume_ident(&mut self, ident: &str) -> bool
-    {
+    pub fn consume_ident(&mut self, ident: &str) -> bool {
         if self.check_ident(ident) {
             let _ = self.advance(ident.len());
 
@@ -137,8 +125,7 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn consume(&mut self, s: &str) -> bool
-    {
+    pub fn consume(&mut self, s: &str) -> bool {
         if self.test_for(s) {
             let _ = self.advance(s.len());
 
@@ -148,26 +135,27 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn eat_byte(&mut self) -> Result<u8>
-    {
+    pub fn eat_byte(&mut self) -> Result<u8> {
         let peek = self.peek_or_eof()?;
         let _ = self.advance_single();
 
         Ok(peek)
     }
 
-    pub fn err<T>(&self, kind: ParseError) -> Result<T>
-    {
+    pub fn err<T>(&self, kind: ParseError) -> Result<T> {
         Err(self.error(kind))
     }
 
-    pub fn error(&self, kind: ParseError) -> Error
-    {
-        Error::Parser(kind, Position { line: self.line, col: self.column })
+    pub fn error(&self, kind: ParseError) -> Error {
+        Error::Parser(kind, Position {
+            line: self.line,
+            col: self.column,
+        })
     }
 
     pub fn float<T>(&mut self) -> Result<T>
-        where T: FromStr
+    where
+        T: FromStr,
     {
         let num_bytes = self.next_bytes_contained_in(FLOAT_CHARS);
 
@@ -179,8 +167,7 @@ impl<'a> Bytes<'a>
         res
     }
 
-    pub fn identifier(&mut self) -> Result<&[u8]>
-    {
+    pub fn identifier(&mut self) -> Result<&[u8]> {
         if IDENT_FIRST.contains(&self.peek_or_eof()?) {
             let bytes = self.next_bytes_contained_in(IDENT_CHAR);
 
@@ -193,8 +180,7 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn is_identifier(&mut self) -> Result<bool>
-    {
+    pub fn is_identifier(&mut self) -> Result<bool> {
         if IDENT_FIRST.contains(&self.peek_or_eof()?) {
             Ok(true)
         } else {
@@ -202,16 +188,14 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn next_bytes_contained_in(&self, allowed: &[u8]) -> usize
-    {
+    pub fn next_bytes_contained_in(&self, allowed: &[u8]) -> usize {
         (0..self.bytes.len())
             .flat_map(|i| self.bytes.get(i))
             .take_while(|b| allowed.contains(b))
             .fold(0, |acc, _| acc + 1)
     }
 
-    pub fn skip_ws(&mut self)
-    {
+    pub fn skip_ws(&mut self) {
         while self.peek().map(|c| WHITE_SPACE.contains(&c)).unwrap_or(false) {
             let _ = self.advance_single();
         }
@@ -221,36 +205,34 @@ impl<'a> Bytes<'a>
         }
     }
 
-    pub fn peek(&self) -> Option<u8>
-    {
+    pub fn peek(&self) -> Option<u8> {
         self.bytes.get(0).map(|b| *b)
     }
 
-    pub fn peek_or_eof(&self) -> Result<u8>
-    {
+    pub fn peek_or_eof(&self) -> Result<u8> {
         self.bytes.get(0).map(|b| *b).ok_or(self.error(ParseError::Eof))
     }
 
     pub fn signed_integer<T>(&mut self) -> Result<T>
-        where T: FromStr + Neg<Output=T>
+    where
+        T: FromStr + Neg<Output = T>,
     {
         match self.peek_or_eof()? {
             b'+' => {
                 let _ = self.advance_single();
 
                 self.unsigned_integer()
-            }
+            },
             b'-' => {
                 let _ = self.advance_single();
 
                 self.unsigned_integer::<T>().map(Neg::neg)
-            }
+            },
             _ => self.unsigned_integer(),
         }
     }
 
-    pub fn string(&mut self) -> Result<ParsedStr>
-    {
+    pub fn string(&mut self) -> Result<ParsedStr> {
         if self.consume("\"") {
             self.escaped_string()
         } else if self.consume("r") {
@@ -260,8 +242,7 @@ impl<'a> Bytes<'a>
         }
     }
 
-    fn escaped_string(&mut self) -> Result<ParsedStr>
-    {
+    fn escaped_string(&mut self) -> Result<ParsedStr> {
         let (i, end_or_escape) = (0..)
             .flat_map(|i| self.bytes.get(i))
             .enumerate()
@@ -305,8 +286,7 @@ impl<'a> Bytes<'a>
         }
     }
 
-    fn raw_string(&mut self) -> Result<ParsedStr>
-    {
+    fn raw_string(&mut self) -> Result<ParsedStr> {
         let num_hashes = self.bytes.iter().take_while(|&&b| b == b'#').count();
         let hashes = &self.bytes[..num_hashes];
         let _ = self.advance(num_hashes);
@@ -331,13 +311,15 @@ impl<'a> Bytes<'a>
         Ok(ParsedStr::Slice(s))
     }
 
-
-    fn test_for(&self, s: &str) -> bool
-    {
-        s.bytes().enumerate().all(|(i, b)| self.bytes.get(i).map(|t| *t == b).unwrap_or(false))
+    fn test_for(&self, s: &str) -> bool {
+        s.bytes()
+            .enumerate()
+            .all(|(i, b)| self.bytes.get(i).map(|t| *t == b).unwrap_or(false))
     }
 
-    pub fn unsigned_integer<T>(&mut self) -> Result<T> where T: FromStr
+    pub fn unsigned_integer<T>(&mut self) -> Result<T>
+    where
+        T: FromStr,
     {
         let num_bytes = self.next_bytes_contained_in(DIGITS);
 
@@ -353,12 +335,11 @@ impl<'a> Bytes<'a>
         res
     }
 
-    fn decode_hex_escape(&mut self) -> Result<u16>
-    {
+    fn decode_hex_escape(&mut self) -> Result<u16> {
         let mut n = 0;
         for _ in 0..4 {
             n = match self.eat_byte()? {
-                c @ b'0' ..= b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
+                c @ b'0'..=b'9' => n * 16_u16 + ((c as u16) - (b'0' as u16)),
                 b'a' | b'A' => n * 16_u16 + 10_u16,
                 b'b' | b'B' => n * 16_u16 + 11_u16,
                 b'c' | b'C' => n * 16_u16 + 12_u16,
@@ -367,15 +348,14 @@ impl<'a> Bytes<'a>
                 b'f' | b'F' => n * 16_u16 + 15_u16,
                 _ => {
                     return self.err(ParseError::InvalidEscape);
-                }
+                },
             };
         }
 
         Ok(n)
     }
 
-    fn parse_str_escape(&mut self, store: &mut Vec<u8>) -> Result<()>
-    {
+    fn parse_str_escape(&mut self, store: &mut Vec<u8>) -> Result<()> {
         use std::iter::repeat;
 
         match self.eat_byte()? {
@@ -388,11 +368,11 @@ impl<'a> Bytes<'a>
             b't' => store.push(b'\t'),
             b'u' => {
                 let c: char = match self.decode_hex_escape()? {
-                    0xDC00 ..= 0xDFFF => {
+                    0xDC00..=0xDFFF => {
                         return self.err(ParseError::InvalidEscape);
-                    }
+                    },
 
-                    n1 @ 0xD800 ..= 0xDBFF => {
+                    n1 @ 0xD800..=0xDBFF => {
                         if self.eat_byte()? != b'\\' {
                             return self.err(ParseError::InvalidEscape);
                         }
@@ -413,38 +393,33 @@ impl<'a> Bytes<'a>
                             Some(c) => c,
                             None => {
                                 return self.err(ParseError::InvalidEscape);
-                            }
+                            },
                         }
-                    }
+                    },
 
-                    n => {
-                        match ::std::char::from_u32(n as u32) {
-                            Some(c) => c,
-                            None => {
-                                return self.err(ParseError::InvalidEscape);
-                            }
-                        }
-                    }
+                    n => match ::std::char::from_u32(n as u32) {
+                        Some(c) => c,
+                        None => {
+                            return self.err(ParseError::InvalidEscape);
+                        },
+                    },
                 };
 
                 let char_start = store.len();
                 store.extend(repeat(0).take(c.len_utf8()));
                 c.encode_utf8(&mut store[char_start..]);
-            }
+            },
             _ => {
                 return self.err(ParseError::InvalidEscape);
-            }
+            },
         }
 
         Ok(())
     }
 
-    fn skip_comment(&mut self) -> bool
-    {
+    fn skip_comment(&mut self) -> bool {
         if self.consume("//") {
-            let bytes = self.bytes.iter().take_while(
-                |&&cur_char| cur_char != b'\n'
-            ).count() + 1;
+            let bytes = self.bytes.iter().take_while(|&&cur_char| cur_char != b'\n').count() + 1;
 
             let _ = self.advance(bytes);
 
@@ -453,8 +428,10 @@ impl<'a> Bytes<'a>
             let mut prev_char: u8 = 0;
             let mut level: u32 = 0;
 
-            let bytes = self.bytes.iter().take_while(
-                |&&cur_char| {
+            let bytes = self
+                .bytes
+                .iter()
+                .take_while(|&&cur_char| {
                     if prev_char == b'*' && cur_char == b'/' {
                         if level == 0 {
                             false
@@ -471,8 +448,9 @@ impl<'a> Bytes<'a>
                         prev_char = cur_char;
                         true
                     }
-                }
-            ).count() + 1;
+                })
+                .count()
+                + 1;
 
             let _ = self.advance(bytes);
 
@@ -484,23 +462,19 @@ impl<'a> Bytes<'a>
 }
 
 #[derive(Clone, Debug)]
-pub enum ParsedStr<'a>
-{
+pub enum ParsedStr<'a> {
     Allocated(String),
     Slice(&'a str),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Position
-{
+pub struct Position {
     pub col: usize,
     pub line: usize,
 }
 
-impl Display for Position
-{
-    fn fmt(&self, f: &mut Formatter) -> FmtResult
-    {
+impl Display for Position {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
         write!(f, "{}:{}", self.line, self.col)
     }
 }
