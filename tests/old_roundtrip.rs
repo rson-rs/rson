@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rson_rs::{de, ser};
+use rson_rs as rson;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -23,17 +23,10 @@ enum Enum {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-struct Inner {
-    id: usize,
-    value: String,
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct Struct {
     tuple: ((), NewType, TupleStruct),
     vec: Vec<Option<UnitStruct>>,
     map: HashMap<Key, Enum>,
-    child: Inner,
 }
 
 #[test]
@@ -41,7 +34,7 @@ fn roundtrip() {
     let value = Struct {
         tuple: ((), NewType(0.5), TupleStruct(UnitStruct, -5)),
         vec: vec![None, Some(UnitStruct)],
-        map: [
+        map: vec![
             (Key(5), Enum::Unit),
             (Key(6), Enum::Bool(false)),
             (Key(7), Enum::Bool(true)),
@@ -49,21 +42,13 @@ fn roundtrip() {
         ]
         .into_iter()
         .collect(),
-        child: Inner {
-            id: 10,
-            value: "Hello \"world\"!\n".to_string(),
-        },
     };
 
-    let serial = ser::to_string_compact(&value).unwrap();
-    println!("Serialized compact: {}", serial);
+    let serial = rson::old::ser::to_string(&value).unwrap();
 
-    let deserial = de::from_str(&serial).unwrap();
-    assert_eq!(value, deserial);
+    println!("Serialized: {}", serial);
 
-    let serial = ser::to_string_pretty(&value).unwrap();
-    println!("Serialized pretty:\n{}", serial);
+    let deserial = rson::old::de::from_str(&serial);
 
-    let deserial = de::from_str(&serial).unwrap();
-    assert_eq!(value, deserial);
+    assert_eq!(Ok(value), deserial);
 }
