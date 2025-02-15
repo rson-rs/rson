@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use rson_rs::old::ser::pretty::to_string;
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 struct Config {

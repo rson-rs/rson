@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::fs::File;
 
-use rson_rs::de::from_reader;
+use rson_rs::old::de::from_reader;
+use serde_derive::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Config {

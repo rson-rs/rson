@@ -1,3 +1,5 @@
+use serde_derive::Serialize;
+
 use super::*;
 
 #[derive(Serialize)]

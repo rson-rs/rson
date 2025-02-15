@@ -1,3 +1,5 @@
+use serde_derive::Deserialize;
+
 use super::*;
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -139,7 +141,7 @@ x: 1.0, // x is just 1
 }
 
 fn err<T>(kind: ParseError, line: usize, col: usize) -> Result<T> {
-    use crate::parse::Position;
+    use super::super::parse::Position;
 
     Err(Error::Parser(kind, Position { line, col }))
 }

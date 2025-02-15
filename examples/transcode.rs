@@ -1,4 +1,4 @@
-use rson_rs::value::Value;
+use rson_rs::old::value::Value;
 use serde::ser::Serialize;
 
 fn main() {

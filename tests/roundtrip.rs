@@ -1,8 +1,7 @@
-extern crate rson_rs as rson;
-#[macro_use]
-extern crate serde_derive;
-
 use std::collections::HashMap;
+
+use rson_rs as rson;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct UnitStruct;
@@ -45,11 +44,11 @@ fn roundtrip() {
         .collect(),
     };
 
-    let serial = rson::ser::to_string(&value).unwrap();
+    let serial = rson::old::ser::to_string(&value).unwrap();
 
     println!("Serialized: {}", serial);
 
-    let deserial = rson::de::from_str(&serial);
+    let deserial = rson::old::de::from_str(&serial);
 
     assert_eq!(Ok(value), deserial);
 }

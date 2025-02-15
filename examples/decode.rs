@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use rson_rs::old::de::from_str;
+use serde_derive::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Config {
