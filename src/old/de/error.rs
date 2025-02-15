@@ -5,7 +5,7 @@ use std::{fmt, io};
 
 use serde::de;
 
-use crate::parse::Position;
+use super::super::parse::Position;
 
 /// Deserialization result.
 pub type Result<T> = ::std::result::Result<T, Error>;

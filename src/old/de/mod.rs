@@ -9,7 +9,7 @@ use serde::Deserializer as SerdeDeserializer;
 /// Deserialization module.
 pub use self::error::{Error, ParseError, Result};
 use self::id::IdDeserializer;
-use crate::parse::Bytes;
+use super::parse::Bytes;
 
 mod error;
 mod id;
@@ -206,7 +206,7 @@ impl<'de, 'a> SerdeDeserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        use crate::parse::ParsedStr;
+        use super::parse::ParsedStr;
 
         match self.bytes.string()? {
             ParsedStr::Allocated(s) => visitor.visit_string(s),

@@ -4,8 +4,8 @@ use std::fmt;
 use serde::de::{Error, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use crate::de;
-use crate::value::{Number, Value};
+use super::super::de;
+use super::super::value::{Number, Value};
 
 impl Value {
     /// Creates a value from a string reference.

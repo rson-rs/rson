@@ -1,10 +1,6 @@
-extern crate rson_rs as rson;
-#[macro_use]
-extern crate serde_derive;
-
 use std::collections::HashMap;
 
-use rson::de::from_str;
+use rson_rs::old::de::from_str;
 
 #[derive(Debug, Deserialize)]
 struct Config {

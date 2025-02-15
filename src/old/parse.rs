@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::ops::Neg;
 use std::str::{from_utf8, from_utf8_unchecked, FromStr};
 
-use crate::de::{Error, ParseError, Result};
+use super::de::{Error, ParseError, Result};
 
 const DIGITS: &[u8] = b"0123456789";
 const FLOAT_CHARS: &[u8] = b"0123456789.+-eE";

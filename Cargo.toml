@@ -4,7 +4,7 @@ version = "0.2.1"
 resolver = "2"
 edition = "2021"
 license = "MIT"
-keywords = ["parser", "serde", "serialization"]
+keywords = ["parser", "serde", "serialization", "deserialization"]
 authors = [
 	"Aleksandr Meshcheriakov <freecoder.xx@gmail.com>",
 ]
@@ -14,7 +14,6 @@ homepage = "https://github.com/rson-rs/rson"
 repository = "https://github.com/rson-rs/rson"
 documentation = "https://docs.rs/rson_rs/"
 exclude = ["bors.toml", ".travis.yml"]
-
 
 [dependencies]
 serde = "1"

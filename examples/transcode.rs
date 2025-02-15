@@ -1,8 +1,4 @@
-extern crate rson_rs as rson;
-extern crate serde;
-extern crate serde_json;
-
-use rson::value::Value;
+use rson_rs::value::Value;
 use serde::ser::Serialize;
 
 fn main() {
