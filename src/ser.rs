@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io;
+use std::{io, mem};
 
 use serde::ser::{
     SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple, SerializeTupleStruct,
@@ -14,162 +14,107 @@ pub mod error;
 pub mod formatter;
 
 pub fn to_string_compact<T: ?Sized + Serialize>(value: &T) -> RsonSerResult<String> {
-    to_string(CompactFormatter, value)
+    compact().to_string(value)
 }
 
 pub fn to_string_pretty<T: ?Sized + Serialize>(value: &T) -> RsonSerResult<String> {
-    to_string(PrettyFormatter::new(), value)
+    pretty().to_string(value)
 }
 
-pub fn to_string_as_var_pretty<T: ?Sized + Serialize>(varname: &str, value: &T) -> RsonSerResult<String> {
-    to_string_as_var(PrettyFormatter::new(), varname, value)
+pub fn builder<F: Formatter + Clone>(formatter: F) -> RsonSerBuilder<F> {
+    RsonSerBuilder::with_formatter(formatter)
 }
 
-pub fn to_string<T: ?Sized + Serialize>(formatter: impl Formatter, value: &T) -> RsonSerResult<String> {
-    let mut buf = Vec::new();
-    to_writer(&mut buf, formatter, value)?;
-    Ok(unsafe { String::from_utf8_unchecked(buf) })
+pub fn compact() -> RsonSerBuilder<CompactFormatter> {
+    RsonSerBuilder::compact()
 }
 
-pub fn to_string_as_var<T: ?Sized + Serialize>(
-    formatter: impl Formatter,
-    varname: &str,
-    value: &T,
-) -> RsonSerResult<String> {
-    let mut buf = Vec::new();
-    to_writer_as_var(&mut buf, formatter, varname, value)?;
-    Ok(unsafe { String::from_utf8_unchecked(buf) })
+pub fn pretty<'a>() -> RsonSerBuilder<PrettyFormatter<'a>> {
+    RsonSerBuilder::pretty()
 }
 
-#[inline]
-pub fn to_writer<W, F, T>(writer: W, formatter: F, value: &T) -> RsonSerResult<()>
-where
-    W: io::Write,
-    F: Formatter,
-    T: ?Sized + Serialize,
-{
-    let mut ser = RsonSerializer::with_formatter(writer, formatter);
-    ser.serialize(value)
-}
-
-#[inline]
-pub fn to_writer_as_var<W, F, T>(writer: W, formatter: F, varname: &str, value: &T) -> RsonSerResult<()>
-where
-    W: io::Write,
-    F: Formatter,
-    T: ?Sized + Serialize,
-{
-    let mut ser = RsonSerializer::with_formatter(writer, formatter);
-    ser.begin_let(varname)?;
-    ser.serialize(value)?;
-    ser.end_let()
-}
-
-#[inline]
-pub fn to_writer_with_wars<W, F, T>(
-    writer: W,
+pub struct RsonSerBuilder<F> {
     formatter: F,
-    vars: impl IntoIterator<Item = (Vec<String>, String)>,
-    value: &T,
-) -> RsonSerResult<()>
-where
-    W: io::Write,
-    F: Formatter,
-    T: ?Sized + Serialize,
-{
-    let mut ser = RsonSerializer::with_formatter(writer, formatter).with_vars(vars);
-    ser.serialize(value)
+    vars: HashMap<Vec<String>, String>,
 }
 
-#[inline]
-pub fn to_writer_as_var_with_wars<W, F, T>(
-    writer: W,
-    formatter: F,
-    varname: &str,
-    vars: impl IntoIterator<Item = (Vec<String>, String)>,
-    value: &T,
-) -> RsonSerResult<()>
-where
-    W: io::Write,
-    F: Formatter,
-    T: ?Sized + Serialize,
-{
-    let mut ser = RsonSerializer::with_formatter(writer, formatter).with_vars(vars);
-    ser.begin_let(varname)?;
-    ser.serialize(value)?;
-    ser.end_let()
-}
-
-pub struct Builder<'a, F> {
-    formatter: F,
-    varname: Option<&'a str>,
-    vars: HashMap<&'a [&'a str], &'a str>,
-}
-
-impl Builder<'_, CompactFormatter> {
+impl RsonSerBuilder<CompactFormatter> {
     pub fn compact() -> Self {
-        Self {
-            formatter: CompactFormatter,
-            varname: None,
-            vars: HashMap::new(),
-        }
+        Self::with_formatter(CompactFormatter)
     }
 }
 
-impl Builder<'_, PrettyFormatter<'_>> {
+impl RsonSerBuilder<PrettyFormatter<'_>> {
     pub fn pretty() -> Self {
-        Self {
-            formatter: PrettyFormatter::new(),
-            varname: None,
-            vars: HashMap::new(),
-        }
+        Self::with_formatter(PrettyFormatter::new())
     }
 }
 
-impl<'a, F: Formatter> Builder<'a, F> {
+impl<F: Formatter + Clone> RsonSerBuilder<F> {
     pub fn with_formatter(formatter: F) -> Self {
         Self {
             formatter,
-            varname: None,
             vars: HashMap::new(),
         }
     }
 
-    pub fn as_var(mut self, name: &'a str) -> Self {
-        self.varname = Some(name);
+    pub fn with_vars(
+        mut self,
+        vars: impl IntoIterator<Item = (impl IntoIterator<Item = impl Into<String>>, impl Into<String>)>,
+    ) -> Self {
+        self.add_vars(vars);
         self
     }
 
-    pub fn with_vars(mut self, vars: impl IntoIterator<Item = (&'a [&'a str], &'a str)>) -> Self {
-        self.vars.extend(vars);
+    pub fn add_vars(
+        &mut self,
+        vars: impl IntoIterator<Item = (impl IntoIterator<Item = impl Into<String>>, impl Into<String>)>,
+    ) -> &mut Self {
+        self.vars.extend(
+            vars.into_iter()
+                .map(|(location, value)| (location.into_iter().map(Into::into).collect(), value.into())),
+        );
         self
     }
 
-    pub fn to_string<T: Serialize>(self, value: &T) -> RsonSerResult<String> {
+    pub fn to_string<T: ?Sized + Serialize>(&mut self, value: &T) -> RsonSerResult<String> {
         let mut buf = Vec::new();
-        let vars = self.to_owned_vars();
+        self.to_writer(&mut buf, value)?;
 
-        if let Some(varname) = self.varname {
-            if vars.is_empty() {
-                to_writer_as_var(&mut buf, self.formatter, varname, value)?;
-            } else {
-                to_writer_as_var_with_wars(&mut buf, self.formatter, varname, vars, value)?;
-            }
-        } else {
-            if vars.is_empty() {
-                to_writer(&mut buf, self.formatter, value)?;
-            } else {
-                to_writer_with_wars(&mut buf, self.formatter, vars, value)?;
-            }
-        }
         Ok(unsafe { String::from_utf8_unchecked(buf) })
     }
 
-    fn to_owned_vars(&self) -> HashMap<Vec<String>, String> {
-        self.vars
-            .iter()
-            .map(|(k, v)| (k.iter().map(|s| s.to_string()).collect(), v.to_string()))
-            .collect()
+    pub fn to_string_var<T: ?Sized + Serialize>(
+        &mut self,
+        value: &T,
+        var_name: impl AsRef<str>,
+    ) -> RsonSerResult<String> {
+        let mut buf = Vec::new();
+        self.to_writer_var(&mut buf, value, var_name)?;
+
+        Ok(unsafe { String::from_utf8_unchecked(buf) })
+    }
+
+    pub fn to_writer<T, W>(&mut self, writer: W, value: &T) -> RsonSerResult<()>
+    where
+        W: io::Write,
+        T: ?Sized + Serialize,
+    {
+        let vars = mem::take(&mut self.vars);
+        let mut ser = RsonSerializer::with_formatter(writer, self.formatter.clone()).with_vars(vars);
+        ser.serialize(value)
+    }
+
+    pub fn to_writer_var<T, W>(&mut self, writer: W, value: &T, var_name: impl AsRef<str>) -> RsonSerResult<()>
+    where
+        W: io::Write,
+        T: ?Sized + Serialize,
+    {
+        let vars = mem::take(&mut self.vars);
+        let mut ser = RsonSerializer::with_formatter(writer, self.formatter.clone()).with_vars(vars);
+        ser.begin_let(var_name.as_ref())?;
+        ser.serialize(value)?;
+        ser.end_let()
     }
 }
 
@@ -217,8 +162,8 @@ impl<W: io::Write, F: Formatter> RsonSerializer<W, F> {
     }
 
     #[inline]
-    pub fn begin_let(&mut self, varname: &str) -> RsonSerResult<()> {
-        self.formatter.begin_let(&mut self.writer, varname)?;
+    pub fn begin_let(&mut self, var_name: &str) -> RsonSerResult<()> {
+        self.formatter.begin_let(&mut self.writer, var_name)?;
         Ok(())
     }
 
@@ -730,8 +675,8 @@ where
 
         self.locate_next_struct_key(key);
 
-        let varname = self.ser.find_var_name();
-        if varname.map(|name| name != key).unwrap_or(true) {
+        let var_name = self.ser.find_var_name();
+        if var_name.map(|name| name != key).unwrap_or(true) {
             self.ser.serialize_name(key)?;
             self.ser.formatter.end_struct_key(&mut self.ser.writer)?;
             self.ser.formatter.begin_struct_value(&mut self.ser.writer)?;

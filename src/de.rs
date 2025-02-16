@@ -12,11 +12,51 @@ pub mod error;
 pub mod parser;
 
 pub fn from_str<'de, T: Deserialize<'de>>(input: &str) -> RsonDeResult<T> {
-    let parser = RsonParser::from_str(input)?;
-    let deserializer = parser.new_deserializer()?;
+    builder().from_str(input)?.deserialize()
+}
 
-    let value = Deserialize::deserialize(deserializer)?;
-    Ok(value)
+pub fn builder() -> RsonDeBuilder {
+    RsonDeBuilder::default()
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct RsonDeBuilder {
+    parser: RsonParser,
+}
+
+impl RsonDeBuilder {
+    pub fn new(parser: RsonParser) -> Self {
+        Self { parser }
+    }
+
+    pub fn with_parser(mut self, parser: RsonParser) -> Self {
+        self.parser = parser;
+        self
+    }
+
+    pub fn from_str(mut self, input: impl AsRef<str>) -> RsonDeResult<Self> {
+        let parser = RsonParser::from_str(input.as_ref())?;
+        self.parser = parser;
+        Ok(self)
+    }
+
+    pub fn deserialize<'de, T: Deserialize<'de>>(&self) -> RsonDeResult<T> {
+        let deserializer = RsonDeserializer::new(&self.parser)?;
+        let value = Deserialize::deserialize(deserializer)?;
+        Ok(value)
+    }
+
+    pub fn deserialize_var<'de, T: Deserialize<'de>>(&self, var_name: impl AsRef<str>) -> RsonDeResult<T> {
+        let var_name = var_name.as_ref();
+        let expr = self
+            .parser
+            .get_var_expr(var_name)
+            .ok_or_else(|| RsonDeError::VarNotFound(var_name.to_string()))?;
+
+        let deserializer = RsonDeserializer::new_with_expr(&self.parser, expr);
+        let value = Deserialize::deserialize(deserializer)?;
+        Ok(value)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -26,7 +66,7 @@ pub struct RsonDeserializer<'a> {
 }
 
 impl<'a> RsonDeserializer<'a> {
-    pub fn new(parser: &'a RsonParser) -> Result<Self, RsonDeError> {
+    pub fn new(parser: &'a RsonParser) -> RsonDeResult<Self> {
         if parser.is_empty() {
             return Err(RsonDeError::NoStatements);
         }

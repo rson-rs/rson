@@ -4,13 +4,12 @@ use proc_macro2::{Spacing, TokenStream, TokenTree};
 use syn::parse::Parser;
 use syn::{Expr, ExprCall, ExprPath, Member, Pat, Stmt};
 
-use super::error::RsonDeResult;
-use super::RsonDeserializer;
-use crate::de::error::RsonDeError;
+use crate::de::error::{RsonDeError, RsonDeResult};
 
+#[derive(Debug, Default, Clone)]
 pub struct RsonParser {
-    pub(super) vars: HashMap<String, Box<Expr>>,
-    pub(super) return_expr: Option<Expr>,
+    pub vars: HashMap<String, Box<Expr>>,
+    pub return_expr: Option<Expr>,
 }
 
 impl RsonParser {
@@ -46,13 +45,13 @@ impl RsonParser {
         Ok(Self { vars, return_expr })
     }
 
-    pub fn new_deserializer(&self) -> RsonDeResult<RsonDeserializer> {
-        RsonDeserializer::new(self)
-    }
-
     pub fn is_empty(&self) -> bool {
         let Self { vars, return_expr } = self;
         vars.is_empty() && return_expr.is_none()
+    }
+
+    pub fn get_var_expr(&self, var_name: impl AsRef<str>) -> Option<&Expr> {
+        self.vars.get(var_name.as_ref()).map(AsRef::as_ref)
     }
 
     pub fn find_field_init_expr<'a>(&'a self, base: &'a Expr, member: &Member) -> RsonDeResult<&'a Expr> {

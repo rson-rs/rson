@@ -2,12 +2,12 @@ use std::io;
 
 pub trait Formatter {
     #[inline]
-    fn begin_let<W>(&mut self, writer: &mut W, varname: &str) -> io::Result<()>
+    fn begin_let<W>(&mut self, writer: &mut W, var_name: &str) -> io::Result<()>
     where
         W: ?Sized + io::Write,
     {
         writer.write_all(b"let ")?;
-        writer.write_all(varname.as_bytes())?;
+        writer.write_all(var_name.as_bytes())?;
         writer.write_all(b"=")
     }
 
@@ -307,7 +307,7 @@ pub struct CompactFormatter;
 
 impl Formatter for CompactFormatter {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PrettyFormatter<'a> {
     current_indent: usize,
     indent: &'a [u8],
@@ -357,12 +357,12 @@ impl<'a> PrettyFormatter<'a> {
 
 impl<'a> Formatter for PrettyFormatter<'a> {
     #[inline]
-    fn begin_let<W>(&mut self, writer: &mut W, varname: &str) -> io::Result<()>
+    fn begin_let<W>(&mut self, writer: &mut W, var_name: &str) -> io::Result<()>
     where
         W: ?Sized + io::Write,
     {
         writer.write_all(b"let ")?;
-        writer.write_all(varname.as_bytes())?;
+        writer.write_all(var_name.as_bytes())?;
         writer.write_all(b" = ")
     }
 

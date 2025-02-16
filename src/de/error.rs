@@ -13,6 +13,9 @@ pub enum RsonDeError {
     #[error("Failed to find return expression")]
     ReturnExprNotFound,
 
+    #[error("Failed to find variable: {0}")]
+    VarNotFound(String),
+
     #[error("Failed to parse: {0}")]
     Parse(String),
 
